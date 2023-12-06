@@ -1,11 +1,11 @@
 import passport from 'passport';
 import local from 'passport-local';
 import { createHash, isValidPassword } from '../utils.js';
-import UserManager from '../DAO/manager/UserManager.js';
+import usersDao from "../DAO/classes/users.dao.js"
 import GitHubStrategy from 'passport-github2';
 
 const LocalStrategy = local.Strategy;
-const userMan = new UserManager();
+const UsersDao = new usersDao(); 
 
 const initializePassword = () => {
   passport.use('register', new LocalStrategy(
@@ -15,13 +15,13 @@ const initializePassword = () => {
       console.log('Registrando usuario...');
 
       try {
-        let user = await userMan.findEmail({ email: username });
+        let user = await UsersDao.findEmail({ email: username });
         if (user) {
           console.log('El usuario ya existe');
           return done(null, false);
         }
 
-        const hashedPassword = await createHash(password);
+       /* const hashedPassword = await createHash(password);
 
         const newUser = {
           first_name,
@@ -30,9 +30,12 @@ const initializePassword = () => {
           age,
           password: hashedPassword,
           rol,
-        };
+        };*/
+        const hashedPassword = await createHash(password); // Aquí se hashea la contraseña
+        const newUser = { first_name, last_name, email, age, rol, password: hashedPassword };
+        
 
-        let result = await userMan.addUser(newUser);
+        let result = await UsersDao.addUser(newUser);
         console.log('Usuario registrado con éxito.');
         return done(null, result);
       } catch (error) {
@@ -47,14 +50,14 @@ const initializePassword = () => {
   });
 
   passport.deserializeUser(async (id, done) => {
-    let user = await userMan.getUserById(id);
+    let user = await UsersDao.getUserById(id);
     done(null, user);
   });
 
   passport.use('login', new LocalStrategy({ usernameField: 'email' }, async (username, password, done) => {
     console.log('Iniciando sesión...');
     try {
-      const user = await userMan.findEmail({ email: username });
+      const user = await UsersDao.findEmail({ email: username });
       if (!user) {
         console.log('Usuario no existe');
         return done(null, false);
@@ -78,7 +81,7 @@ const initializePassword = () => {
   }, async (accessToken, refreshToken, profile, done) => {
     console.log('Iniciando sesión con GitHub...');
     try {
-      let user = await userMan.findEmail({ email: profile._json.email });
+      let user = await UsersDao.findEmail({ email: profile._json.email });
       if (!user) {
         let newUser = {
           first_name: profile._json.login,
@@ -88,7 +91,7 @@ const initializePassword = () => {
           password: '',
           rol: 'usuario',
         };
-        let result = await userMan.addUser(newUser);
+        let result = await UsersDao.addUser(newUser);
         console.log('Usuario de GitHub registrado con éxito.');
         done(null, result);
       } else {
